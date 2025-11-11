@@ -132,7 +132,7 @@ public class CSController {
         Object clientIdObj = state.get("clientId");
         if (clientIdObj != null) {
             myClientId = String.valueOf(clientIdObj);
-            clientID.setText(STR."ID: \{myClientId}");
+            clientID.setText(STR."player: \{myClientId}");
         }
         Object boardObj = state.get("board");
         if (boardObj instanceof List<?> outer) {

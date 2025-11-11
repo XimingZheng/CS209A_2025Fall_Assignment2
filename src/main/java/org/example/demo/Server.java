@@ -54,6 +54,7 @@ public class Server {
         clients.put(playerID, ch);
 
         ch.setViewingId(playerID);
+        viewers.computeIfAbsent(playerID, k -> ConcurrentHashMap.newKeySet()).add(ch);
         return ch;
     }
     public void broadcastPlayerListUpdate() {
@@ -66,6 +67,10 @@ public class Server {
     public void removeClient(String clientId) {
         farms.remove(clientId);
         clients.remove(clientId);
+        for (Set<ClientHandler> viewerSet : viewers.values()) {
+            viewerSet.remove(clients.get(clientId));
+        }
+        viewers.remove(clientId);
         System.out.println(clientId + " disconnected.");
         broadcastPlayerListUpdate();
     }
