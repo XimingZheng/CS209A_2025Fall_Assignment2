@@ -1,0 +1,104 @@
+package org.example.demo;
+
+
+import java.util.Random;
+
+/**
+ * Minimal game logic to demonstrate multithreading and synchronization.
+ */
+public class Farm {
+    private static final int ROWS = 4;
+    private static final int COLS = 4;
+    private static final int PLANT_COST = 5;
+    private static final int HARVEST_REWARD = 12;
+    private static final int STEAL_REWARD = 4;
+    private static final long GROW_MS = 10_000;
+
+    private final PlotState[][] board = new PlotState[ROWS][COLS];
+    private final long[][] plantedAt = new long[ROWS][COLS];
+    private final Random random = new Random();
+    private final String id;
+    private int coins = 40;
+    public Farm(String id) {
+        this.id = id;
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLS; j++) {
+                board[i][j] = PlotState.EMPTY;
+            }
+        }
+    }
+    public synchronized int getCoins() {
+        return coins;
+    }
+    public synchronized PlotState getState(int row, int col) {
+        return board[row][col];
+    }
+    public synchronized void plant(int row, int col) {
+        if (!checkInBounds(row,col)) {
+            throw new IllegalStateException("Out of bound");
+        }
+        if (board[row][col] != PlotState.EMPTY) {
+            throw new IllegalStateException("Plot occupied");
+        }
+        if (coins < PLANT_COST) {
+            throw new IllegalStateException("Not enough coins");
+        }
+        coins -= PLANT_COST;
+        plantedAt[row][col] = System.currentTimeMillis();
+        board[row][col] = PlotState.GROWING;
+    }
+
+    public synchronized void harvest(int row, int col) {
+        if (!checkInBounds(row,col)) {
+            throw new IllegalStateException("Out of bound");
+        }
+        if (board[row][col] != PlotState.RIPE) {
+            throw new IllegalStateException("Crop not ripe");
+        }
+        board[row][col] = PlotState.EMPTY;
+        coins += HARVEST_REWARD;
+    }
+
+    public synchronized void steal(int row, int col) {
+        // Simple simulation of being stolen by another player
+        // TODO: replace this demo logic with server-driven stealing requests from other clients.
+    }
+
+    public synchronized boolean tickGrow() {
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLS; j++) {
+                if (board[i][j] == PlotState.GROWING) {
+                    if (now - plantedAt[i][j] >= GROW_MS) {
+                        board[i][j] = PlotState.RIPE;
+                        plantedAt[i][j] = 0L;
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return changed;
+    }
+
+    public int getRows() {
+        return ROWS;
+    }
+
+    public int getCols() {
+        return COLS;
+    }
+    public String getId() {
+        return id;
+    }
+    public synchronized PlotState[][] snapshot() {
+        PlotState[][] copy = new PlotState[ROWS][COLS];
+        for (int i = 0; i < ROWS; i++)
+            System.arraycopy(board[i], 0, copy[i], 0, COLS);
+        return copy;
+    }
+    private boolean checkInBounds(int r, int c) {
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+        else return true;
+    }
+}

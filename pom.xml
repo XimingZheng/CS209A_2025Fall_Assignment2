@@ -37,6 +37,12 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -48,6 +54,11 @@
         <configuration>
           <source>22</source>
           <target>22</target>
+          <!-- Enable preview features because the code uses Java preview features (e.g. string templates) -->
+          <fork>false</fork>
+          <compilerArgs>
+            <arg>--enable-preview</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
@@ -59,7 +70,7 @@
             <!-- Default configuration for running with: mvn clean javafx:run -->
             <id>default-cli</id>
             <configuration>
-              <mainClass>org.example.demo/org.example.demo.Application</mainClass>
+              <mainClass>org.example.demo/org.example.demo.server.Server</mainClass>
               <launcher>app</launcher>
               <jlinkZipName>app</jlinkZipName>
               <jlinkImageName>app</jlinkImageName>

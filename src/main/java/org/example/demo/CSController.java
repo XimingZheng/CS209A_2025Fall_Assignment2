@@ -1,0 +1,174 @@
+package org.example.demo;
+
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.layout.GridPane;
+import javafx.util.Duration;
+import org.example.demo.GameClient;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+public class CSController {
+
+    @FXML private GridPane gameBoard;
+
+    @FXML private Label coinsLabel;
+
+    @FXML private Button plantButton;
+
+    @FXML private Button harvestButton;
+
+    @FXML private Button stealButton;
+
+    private GameClient client;
+    private int rows = 4, cols = 4;
+    private ToggleButton[][] cells;
+    private PlotState [][] cellState;
+    private Timeline refreshTimeline;
+    private String statusMsg = "Ready.";
+
+    private int selectedRow = -1;
+    private int selectedCol = -1;
+
+
+    private int coins = 0;
+
+    public void init(String host, int port) throws IOException {
+        client = new GameClient(host, port, this);
+        client.connect();
+        cellState = new PlotState[rows][cols];
+        createBoard();
+        refreshBoard();
+        startRefreshTicker();
+    }
+
+    private void createBoard() {
+        gameBoard.getChildren().clear();
+        cells = new ToggleButton[rows][cols];
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                ToggleButton cell = new ToggleButton();
+                cell.setPrefSize(60, 60);
+                cell.getStyleClass().add("plot-button");
+                int r = row;
+                int c = col;
+                cell.setOnAction(event -> {
+                    selectedRow = r;
+                    selectedCol = c;
+                    refreshBoard();
+                });
+                gameBoard.add(cell, col, row);
+                cells[row][col] = cell;
+                cellState[row][col] = PlotState.EMPTY;
+            }
+        }
+    }
+
+    private void refreshBoard() {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                ToggleButton cell = cells[row][col];
+                cell.setSelected(row == selectedRow && col == selectedCol);
+                updateCellState(cell, row, col);
+            }
+        }
+        renderStatus();
+    }
+
+    private void updateCellState(ToggleButton cell, int row, int col) {
+        PlotState state = cellState[row][col];
+        cell.getStyleClass().removeAll("state-empty", "state-growing", "state-ripe");
+        cell.setText(switch (state) {
+            case EMPTY -> "Empty";
+            case GROWING -> "Growing";
+            case RIPE -> "Ripe";
+        });
+        switch (state) {
+            case EMPTY -> cell.getStyleClass().add("state-empty");
+            case GROWING -> cell.getStyleClass().add("state-growing");
+            case RIPE -> cell.getStyleClass().add("state-ripe");
+        }
+    }
+
+    private boolean ensureSelection() {
+        return selectedRow >= 0 && selectedCol >= 0;
+    }
+
+    private void startRefreshTicker() {
+        refreshTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> refreshBoard()));
+        refreshTimeline.setCycleCount(Timeline.INDEFINITE);
+        refreshTimeline.play();
+    }
+
+    public void shutdown() {
+        try {
+            if (client != null) {
+                client.quit();
+                client.close();
+            }
+        } catch (IOException ignore) {}
+    }
+
+    public void handleUpdate(Map<String,Object> state) {
+        Object c = state.get("coins");
+        if (c instanceof Number n) coins = n.intValue();
+        Object m = state.get("msg");
+        if (m != null) statusMsg = String.valueOf(m);
+
+        Object boardObj = state.get("board");
+        if (boardObj instanceof List<?> outer) {
+            for (int i = 0; i < rows; i++) {
+                List<?> rowList = (List<?>) outer.get(i);
+                for (int j = 0; j < cols; j++) {
+                    String s = String.valueOf(rowList.get(j)); // "EMPTY"/"GROWING"/"RIPE"
+                    cellState[i][j] = PlotState.valueOf(s);
+                }
+            }
+        }
+        refreshBoard();
+        renderStatus();
+    }
+    public void handleError(String err) {
+        onError(err);
+    }
+
+    private void onError(String err) {
+        statusMsg = STR."ERR: \{err}";
+        renderStatus();
+    }
+    private void renderStatus() {
+        coinsLabel.setText("Coins: "+coins +" | "+ statusMsg);
+    }
+
+    // ============ 按钮事件 ============
+    @FXML private void handlePlant() {
+        if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }
+        try {
+            client.plant(selectedRow, selectedCol);
+            statusMsg = "Plant requested...";
+            renderStatus();
+        } catch (Exception e) { onError(e.getMessage()); }
+    }
+
+    @FXML private void handleHarvest() {
+        if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }
+        try {
+            client.harvest(selectedRow, selectedCol);
+            statusMsg = "Harvest requested...";
+            renderStatus();
+        } catch (Exception e) { onError(e.getMessage()); }
+    }
+
+    @FXML private void handleSteal() {
+        statusMsg = "Singleplayer: steal disabled.";
+        renderStatus();
+    }
+
+}

@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <?import java.net.URL?>
-<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.demo.Controller" spacing="10" styleClass="farm-root">
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.demo.CSController" spacing="10" styleClass="farm-root">
   <stylesheets>
     <URL value="@styles.css" />
   </stylesheets>
