@@ -8,10 +8,13 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.util.Duration;
 import org.example.demo.GameClient;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,11 +24,15 @@ public class CSController {
 
     @FXML private Label coinsLabel;
 
+    @FXML private Label clientID;
+
     @FXML private Button plantButton;
 
     @FXML private Button harvestButton;
 
     @FXML private Button stealButton;
+
+    @FXML private HBox playersBox;
 
     private GameClient client;
     private int rows = 4, cols = 4;
@@ -36,7 +43,8 @@ public class CSController {
 
     private int selectedRow = -1;
     private int selectedCol = -1;
-
+    private String myClientId;
+    private Map<String, String> players = new HashMap<String, String>();   // [player][viewing]
 
     private int coins = 0;
 
@@ -121,7 +129,11 @@ public class CSController {
         if (c instanceof Number n) coins = n.intValue();
         Object m = state.get("msg");
         if (m != null) statusMsg = String.valueOf(m);
-
+        Object clientIdObj = state.get("clientId");
+        if (clientIdObj != null) {
+            myClientId = String.valueOf(clientIdObj);
+            clientID.setText(STR."ID: \{myClientId}");
+        }
         Object boardObj = state.get("board");
         if (boardObj instanceof List<?> outer) {
             for (int i = 0; i < rows; i++) {
@@ -132,9 +144,18 @@ public class CSController {
                 }
             }
         }
+        Object playersObj = state.get("players");
+        if (playersObj instanceof Map<?,?> playersMap) {
+            players.clear();
+            playersMap.forEach((k, v) ->
+                    players.put(String.valueOf(k), String.valueOf(v))
+            );
+            updatePlayersList();
+        }
         refreshBoard();
         renderStatus();
     }
+
     public void handleError(String err) {
         onError(err);
     }
@@ -146,7 +167,23 @@ public class CSController {
     private void renderStatus() {
         coinsLabel.setText("Coins: "+coins +" | "+ statusMsg);
     }
+    private void updatePlayersList() {
+        if (playersBox.getChildren().size() > 1) {
+            playersBox.getChildren().remove(1, playersBox.getChildren().size());
+        }
 
+        for (String player : players.keySet()) {
+            Button playerBtn = new Button(player);
+            playerBtn.setText(player);
+
+            if (player.equals(players.get(player))) {
+                // player viewing player -> online
+                playerBtn.getStyleClass().add("player-online-button");
+            } else playerBtn.getStyleClass().add("player-offline-button");
+
+            playersBox.getChildren().add(playerBtn);
+        }
+    }
     // ============ 按钮事件 ============
     @FXML private void handlePlant() {
         if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }

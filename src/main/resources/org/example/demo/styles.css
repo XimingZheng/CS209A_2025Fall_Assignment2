@@ -10,6 +10,11 @@
   -fx-font-weight: bold;
   -fx-text-fill: #2e7d32;
 }
+.clientID-label {
+  -fx-font-size: 14px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #a87136;
+}
 
 /* Game board container */
 .game-board {
@@ -83,3 +88,29 @@
   -fx-text-fill: white;
 }
 .action-steal:hover { -fx-background-color: linear-gradient(#74bdf9, #52adf8); }
+
+.player-online-button {
+  -fx-background-color: #ffe;
+  -fx-text-fill: #51c506;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
+  -fx-padding: 5 10;
+  -fx-background-radius: 5;
+  -fx-border-radius: 5;
+  -fx-border-width: 1;
+  -fx-border-color: rgba(0,0,0,0.2);
+}
+.player-online-button:hover{
+  background-color: #eee;
+}
+.player-offline-button {
+  -fx-background-color: linear-gradient(#e0e0e0, #bdbdbd);
+  -fx-text-fill: #930303;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
+  -fx-padding: 5 10;
+  -fx-background-radius: 5;
+  -fx-border-radius: 5;
+  -fx-border-width: 1;
+  -fx-border-color: rgba(0,0,0,0.2);
+}

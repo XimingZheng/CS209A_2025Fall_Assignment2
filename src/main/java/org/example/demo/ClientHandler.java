@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import java.io.*;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -13,6 +14,7 @@ public class ClientHandler implements Runnable {
     private final Server server;
     private final Socket socket;
     private final Farm farm;
+    private Map<String, String> playerList; //玩家列表
     private volatile String playerId;
     private volatile String viewingId;
     private volatile boolean running = true;
@@ -63,7 +65,7 @@ public class ClientHandler implements Runnable {
                             writeState(out, STR."stolen at (\{r}, \{c})");
                             dirty.set(true);
                         } else if ("quit".equals(op)) {
-                            running = false;
+                            quit();
                         } else {
                             writeError(out, "unknown op");
                         }
@@ -85,6 +87,15 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private void quit() {
+        try {
+            socket.close();
+            server.removeClient(playerId);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void writeState(BufferedWriter out, String msg) throws IOException {
         out.write(GSON.toJson(formatMsg(msg, farm)));
         out.write("\n");
@@ -92,6 +103,7 @@ public class ClientHandler implements Runnable {
     }
     private Map<String,Object> formatMsg(String msg, Farm farm){
         Map<String,Object> rsp = new HashMap<>();
+        rsp.put("clientId", playerId);
         rsp.put("type","state");
         rsp.put("msg", msg);
         rsp.put("coins", farm.getCoins());
@@ -102,6 +114,11 @@ public class ClientHandler implements Runnable {
             for (int j=0;j<b[0].length;j++)
                 arr[i][j] = b[i][j].name();
         rsp.put("board", arr);
+
+        if (playerList != null) {
+            rsp.put("players", playerList);
+        }
+
         return rsp;
     }
 
@@ -119,7 +136,13 @@ public class ClientHandler implements Runnable {
     public void setViewingId(String s) {
         this.viewingId = s;
     }
+    public String getViewingId() {return this.viewingId; }
     public Farm getFarm() {
         return farm;
+    }
+
+    public void updatePlayerList(Map<String, String> players) {
+        this.playerList = players;
+        markDirty();
     }
 }

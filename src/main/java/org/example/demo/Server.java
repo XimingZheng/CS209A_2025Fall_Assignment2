@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class Server {
     private static final int PORT = 5050;
@@ -12,6 +13,8 @@ public class Server {
     private final Map<String, Farm> farms = new ConcurrentHashMap<>();
     // 谁在看谁：ownerId -> viewers（这些连接正在观看这个owner的农场）
     private final Map<String, Set<ClientHandler>> viewers = new ConcurrentHashMap<>();
+    private final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
+    private int nextId = 1;
     // 在线会话
     private final Set<ClientHandler> sessions = ConcurrentHashMap.newKeySet();
 
@@ -21,41 +24,6 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
         new Server().start();
-
-//        System.out.println(STR."[Server] starting on \{PORT} ...");
-//
-//        // 单人模式
-//        Farm farm = new Farm("player-1");
-//
-//        // 全局调度器：每 1 秒推进一次生长；有变化通知 handler 推送
-//        ScheduledExecutorService schedule = Executors.newSingleThreadScheduledExecutor(r -> {
-//            Thread t = new Thread(r, "farm-ticker");
-//            t.setDaemon(true); return t;
-//        });
-//
-//        try (ServerSocket ss = new ServerSocket(PORT)) {
-//            while (true) {
-//                Socket socket = ss.accept();
-//                System.out.println(STR."[Server] new client: \{socket.getRemoteSocketAddress()}");
-//
-//                ClientHandler handler = new ClientHandler(socket, farm);
-//                Thread th = new Thread(handler, "client-handler");
-//                th.start();
-//
-//                // 启动（或复用）定时器，单人版只需要一个；多人时放到全局并广播给所有 handler
-//                schedule.scheduleAtFixedRate(() -> {
-//                    try {
-//                        if (farm.tickGrow()) {
-//                            handler.markDirty(); // 标记需要推送
-//                        }
-//                    } catch (Throwable t) {
-//                        t.printStackTrace();
-//                    }
-//                }, 1, 100, TimeUnit.MILLISECONDS);
-//            }
-//        } finally {
-//            schedule.shutdownNow();
-//        }
     }
 
     public void start() throws IOException {
@@ -70,22 +38,36 @@ public class Server {
                 System.out.println("[Server] new client: " + s.getRemoteSocketAddress());
 
                 ClientHandler ch = createClient(s);
-
                 new Thread(ch, "client-" + s.getPort()).start();
+                System.out.println(ch.getPlayerId() + " connected.");
+                broadcastPlayerListUpdate();
             }
         }
     }
     private ClientHandler createClient(Socket s) {
-        String playerID = UUID.randomUUID().toString();
+        String playerID = String.valueOf(nextId++);
 
-        Farm farm = farms.computeIfAbsent(playerID, Farm::new);
+        Farm farm = new Farm(playerID);
+        farms.put(playerID, farm);
 
         ClientHandler ch = new ClientHandler(this, s, farm, playerID);
-        sessions.add(ch);
+        clients.put(playerID, ch);
 
-        viewers.computeIfAbsent(playerID, id -> ConcurrentHashMap.newKeySet()).add(ch);
         ch.setViewingId(playerID);
         return ch;
+    }
+    public void broadcastPlayerListUpdate() {
+        Map<String, String> playerList = farms.keySet().stream()
+                .collect(Collectors.toMap(s -> s, s -> clients.get(s).getPlayerId()));
+        for (ClientHandler client : clients.values()) {
+            client.updatePlayerList(playerList);
+        }
+    }
+    public void removeClient(String clientId) {
+        farms.remove(clientId);
+        clients.remove(clientId);
+        System.out.println(clientId + " disconnected.");
+        broadcastPlayerListUpdate();
     }
 
     private void tickAllFarms() {

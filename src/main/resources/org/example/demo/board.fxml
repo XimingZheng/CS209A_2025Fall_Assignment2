@@ -1,27 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<?import java.net.URL?>
-<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.demo.CSController" spacing="10" styleClass="farm-root">
+<VBox spacing="10" styleClass="farm-root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.demo.CSController">
   <stylesheets>
     <URL value="@styles.css" />
   </stylesheets>
+   <Label fx:id="clientID" styleClass="clientID-label" text="ID" />
   <!-- Top status bar: coins + status message -->
-  <HBox spacing="10" alignment="CENTER_LEFT">
-    <Label fx:id="coinsLabel" text="Coins: 0 | Ready." styleClass="coins-label" />
+  <HBox alignment="CENTER_LEFT" spacing="10">
+    <Label fx:id="coinsLabel" styleClass="coins-label" text="Coins: 0 | Ready." />
   </HBox>
 
   <!-- Game board grid (cells created by Controller) -->
-  <GridPane fx:id="gameBoard" VBox.vgrow="ALWAYS" hgap="5" vgap="5" styleClass="game-board" />
+  <GridPane fx:id="gameBoard" hgap="5" styleClass="game-board" vgap="5" VBox.vgrow="ALWAYS" />
 
   <!-- Action buttons -->
-  <HBox spacing="10" alignment="CENTER">
-    <Button fx:id="plantButton" text="Plant" onAction="#handlePlant" styleClass="button action-plant" />
-    <Button fx:id="harvestButton" text="Harvest" onAction="#handleHarvest" styleClass="button action-harvest" />
-    <Button fx:id="stealButton" text="Steal" onAction="#handleSteal" styleClass="button action-steal" />
+  <HBox alignment="CENTER" spacing="10">
+    <Button fx:id="plantButton" onAction="#handlePlant" styleClass="button action-plant" text="Plant" />
+    <Button fx:id="harvestButton" onAction="#handleHarvest" styleClass="button action-harvest" text="Harvest" />
+    <Button fx:id="stealButton" onAction="#handleSteal" styleClass="button action-steal" text="Steal" />
+  </HBox>
+  <!-- players connected to the server-->
+  <HBox fx:id="playersBox" alignment="CENTER" spacing="5">
+    <Label text="Players:" styleClass="clientID-label" />
   </HBox>
 </VBox>
