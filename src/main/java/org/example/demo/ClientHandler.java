@@ -37,7 +37,7 @@ public class ClientHandler implements Runnable {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
 
-            writeState(out, "welcome");
+            writeState(out, "welcome", farm);
 
             String line;
             while (running && !socket.isClosed()) {
@@ -50,19 +50,27 @@ public class ClientHandler implements Runnable {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
                             farm.plant(r, c);
-                            writeState(out, STR."planted at (\{r}, \{c})");
+                            writeState(out, STR."planted at (\{r}, \{c})", farm);
                             dirty.set(true);
+                            server.broadcastState(playerId);
                         } else if ("harvest".equals(op)) {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
                             farm.harvest(r, c);
-                            writeState(out, STR."harvest at (\{r}, \{c})");
+                            writeState(out, STR."harvest at (\{r}, \{c})", farm);
                             dirty.set(true);
+                            server.broadcastState(playerId);
                         } else if ("steal".equals(op)) {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
                             farm.steal(r, c);
-                            writeState(out, STR."stolen at (\{r}, \{c})");
+                            writeState(out, STR."stolen at (\{r}, \{c})", farm);
+                            dirty.set(true);
+                        } else if ("view".equals(op)) {
+                            String target = (String) request.get("target");
+                            viewingId = target;
+                            playerList.replace(playerId, viewingId);
+                            server.setView(playerId, viewingId);
                             dirty.set(true);
                         } else if ("quit".equals(op)) {
                             quit();
@@ -75,29 +83,29 @@ public class ClientHandler implements Runnable {
                 }
 
                 if (dirty.compareAndSet(true, false)) {
-                    writeState(out, "update");
+                    Farm viewingFarm = server.getFarm(viewingId);
+                    writeState(out, "update", viewingFarm);
                 }
 
                 Thread.sleep(10);
             }
         } catch (Exception e) {
             System.out.println(STR."[Client] closed: \{e.getMessage()}");
-        } finally {
-            try { socket.close(); } catch (IOException ignore) {}
         }
     }
 
     private void quit() {
         try {
             socket.close();
+            System.out.println(playerId + "QUIT");
             server.removeClient(playerId);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void writeState(BufferedWriter out, String msg) throws IOException {
-        out.write(GSON.toJson(formatMsg(msg, farm)));
+    private void writeState(BufferedWriter out, String msg, Farm targetFarm) throws IOException {
+        out.write(GSON.toJson(formatMsg(msg, targetFarm)));
         out.write("\n");
         out.flush();
     }

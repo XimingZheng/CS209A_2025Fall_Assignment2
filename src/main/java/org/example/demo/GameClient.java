@@ -42,7 +42,6 @@ public class GameClient implements Closeable {
                     } else if ("error".equals(type)) {
                         Platform.runLater(() -> controller.handleError(String.valueOf(message.get("msg"))));
                     } else {
-                        // 其它类型直接提示
                         String finalLine = line;
                         Platform.runLater(() ->  controller.handleError("Unknown: " + finalLine));
                     }
@@ -62,8 +61,9 @@ public class GameClient implements Closeable {
 
     public void plant(int r, int c) { send(Map.of("op","plant","row",r,"col",c)); }
     public void harvest(int r, int c) { send(Map.of("op","harvest","row",r,"col",c)); }
-    public void quit() { send(Map.of("op","quit")); }
 
+    public void view(String player) {send(Map.of("op", "view", "target", player));}
+    public void quit() { send(Map.of("op","quit")); }
     @Override public void close() throws IOException {
         running = false;
         if (sock != null) sock.close();

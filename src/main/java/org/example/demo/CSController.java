@@ -175,6 +175,17 @@ public class CSController {
         for (String player : players.keySet()) {
             Button playerBtn = new Button(player);
             playerBtn.setText(player);
+            if (player.equals(myClientId)) {
+                playerBtn.setText("Me");
+            }
+
+            playerBtn.setOnAction(event -> {
+                // myClient viewing player
+                players.replace(myClientId, player);
+                statusMsg = "Viewing player: " + player;
+                renderStatus();
+                client.view(player);
+            });
 
             if (player.equals(players.get(player))) {
                 // player viewing player -> online
@@ -184,7 +195,6 @@ public class CSController {
             playersBox.getChildren().add(playerBtn);
         }
     }
-    // ============ 按钮事件 ============
     @FXML private void handlePlant() {
         if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }
         try {
