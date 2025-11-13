@@ -61,8 +61,8 @@ public class GameClient implements Closeable {
 
     public void plant(int r, int c) { send(Map.of("op","plant","row",r,"col",c)); }
     public void harvest(int r, int c) { send(Map.of("op","harvest","row",r,"col",c)); }
-
-    public void view(String player) {send(Map.of("op", "view", "target", player));}
+    public void steal(int r, int c) { send(Map.of("op","steal","row",r,"col",c)); }
+    public void view(String player) {send(Map.of("op","view","target", player));}
     public void quit() { send(Map.of("op","quit")); }
     @Override public void close() throws IOException {
         running = false;

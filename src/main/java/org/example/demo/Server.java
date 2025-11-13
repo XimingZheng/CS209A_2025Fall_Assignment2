@@ -12,7 +12,6 @@ public class Server {
     // ownerId -> farm
     private final Map<String, Farm> farms = new ConcurrentHashMap<>();
 
-
     // 谁在看谁：ownerId -> viewers（这些连接正在观看这个owner的农场）
     private final Map<String, Set<ClientHandler>> viewers = new ConcurrentHashMap<>();
     private final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
@@ -124,6 +123,26 @@ public class Server {
         visitor.markDirty();
 
         broadcastPlayerListUpdate();
+    }
+
+    public String handleSteal(String thiefId, String victimId, int row, int col) {
+        ClientHandler victim = clients.get(victimId);
+        ClientHandler thief = clients.get(thiefId);
+
+        if (victimId.equals(victim.getViewingId())) {
+            return "Owner is at home, cannot steal";
+        }
+
+        Farm victimFarm = farms.get(victimId);
+        Farm thiefFarm = farms.get(thiefId);
+        int amount = victimFarm.steal(row, col);
+
+        thiefFarm.addCoins(amount);
+
+        broadcastState(victimId);
+        broadcastState(thiefId);
+
+        return STR."\{thiefId} stole \{amount} from \{victimId} at (\{row},\{col})";
     }
 
 }

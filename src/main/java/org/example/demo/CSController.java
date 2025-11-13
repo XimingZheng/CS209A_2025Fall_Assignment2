@@ -44,6 +44,7 @@ public class CSController {
     private int selectedRow = -1;
     private int selectedCol = -1;
     private String myClientId;
+    private String currentViewingId;
     private Map<String, String> players = new HashMap<String, String>();   // [player][viewing]
 
     private int coins = 0;
@@ -150,7 +151,9 @@ public class CSController {
             playersMap.forEach((k, v) ->
                     players.put(String.valueOf(k), String.valueOf(v))
             );
+            currentViewingId = players.get(myClientId);
             updatePlayersList();
+            updateActionButtons();
         }
         refreshBoard();
         renderStatus();
@@ -174,14 +177,13 @@ public class CSController {
 
         for (String player : players.keySet()) {
             Button playerBtn = new Button(player);
+
             playerBtn.setText(player);
             if (player.equals(myClientId)) {
                 playerBtn.setText("Me");
             }
 
             playerBtn.setOnAction(event -> {
-                // myClient viewing player
-                players.replace(myClientId, player);
                 statusMsg = "Viewing player: " + player;
                 renderStatus();
                 client.view(player);
@@ -190,9 +192,23 @@ public class CSController {
             if (player.equals(players.get(player))) {
                 // player viewing player -> online
                 playerBtn.getStyleClass().add("player-online-button");
-            } else playerBtn.getStyleClass().add("player-offline-button");
+            } else {
+                playerBtn.getStyleClass().add("player-offline-button");
+            }
 
             playersBox.getChildren().add(playerBtn);
+        }
+    }
+    private void updateActionButtons () {
+        if (currentViewingId.equals(myClientId)){
+            // me viewing myself
+            harvestButton.setDisable(false);
+            plantButton.setDisable(false);
+            stealButton.setDisable(true); // cannot steal myself
+        } else {
+            harvestButton.setDisable(true);
+            plantButton.setDisable(true);
+            stealButton.setDisable(false);
         }
     }
     @FXML private void handlePlant() {
@@ -214,8 +230,12 @@ public class CSController {
     }
 
     @FXML private void handleSteal() {
-        statusMsg = "Singleplayer: steal disabled.";
-        renderStatus();
+        if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }
+        try {
+            client.steal(selectedRow, selectedCol);
+            statusMsg = STR."\{myClientId} steal at (\{selectedRow}, \{selectedCol})";
+            renderStatus();
+        } catch (Exception e) { onError(e.getMessage()); }
     }
 
 }

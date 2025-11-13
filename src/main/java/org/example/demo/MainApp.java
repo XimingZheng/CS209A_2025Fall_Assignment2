@@ -18,7 +18,7 @@ public class MainApp extends Application {
         controller = loader.getController();
 
         Scene scene = new Scene(root);
-        stage.setTitle("QQ Farm Demo");
+        stage.setTitle("QQ Farm");
         stage.setScene(scene);
 
         controller.init("localhost", 5050);

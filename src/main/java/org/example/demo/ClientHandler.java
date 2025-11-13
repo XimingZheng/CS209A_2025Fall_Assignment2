@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientHandler implements Runnable {
     private static final Gson GSON = new Gson();
+    private static String msg;
     private final Server server;
     private final Socket socket;
     private final Farm farm;
@@ -27,17 +28,17 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
         this.farm = farm;
         this.playerId = id;
+        msg = "";
     }
 
-    /** 被 Server 调用：有变化时标记需要推送 */
     public void markDirty() { dirty.set(true); }
 
     @Override public void run() {
         System.out.println(STR."[Client] connected: \{socket}");
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
-
-            writeState(out, "welcome", farm);
+            msg = "welcome";
+            writeState(out, farm);
 
             String line;
             while (running && !socket.isClosed()) {
@@ -50,28 +51,28 @@ public class ClientHandler implements Runnable {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
                             farm.plant(r, c);
-                            writeState(out, STR."planted at (\{r}, \{c})", farm);
+                            msg = STR."planted at (\{r}, \{c})";
+                            writeState(out, farm);
                             dirty.set(true);
                             server.broadcastState(playerId);
                         } else if ("harvest".equals(op)) {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
                             farm.harvest(r, c);
-                            writeState(out, STR."harvest at (\{r}, \{c})", farm);
+                            msg = STR."harvest at (\{r}, \{c})";
+                            writeState(out, farm);
                             dirty.set(true);
                             server.broadcastState(playerId);
                         } else if ("steal".equals(op)) {
                             int r = ((Double) request.get("row")).intValue();
                             int c = ((Double) request.get("col")).intValue();
-                            farm.steal(r, c);
-                            writeState(out, STR."stolen at (\{r}, \{c})", farm);
+                            String rsp = server.handleSteal(playerId, viewingId, r, c);
+                            msg = rsp;
                             dirty.set(true);
                         } else if ("view".equals(op)) {
                             String target = (String) request.get("target");
                             viewingId = target;
-                            playerList.replace(playerId, viewingId);
                             server.setView(playerId, viewingId);
-                            dirty.set(true);
                         } else if ("quit".equals(op)) {
                             quit();
                         } else {
@@ -84,7 +85,7 @@ public class ClientHandler implements Runnable {
 
                 if (dirty.compareAndSet(true, false)) {
                     Farm viewingFarm = server.getFarm(viewingId);
-                    writeState(out, "update", viewingFarm);
+                    writeState(out, viewingFarm);
                 }
 
                 Thread.sleep(10);
@@ -104,17 +105,17 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void writeState(BufferedWriter out, String msg, Farm targetFarm) throws IOException {
-        out.write(GSON.toJson(formatMsg(msg, targetFarm)));
+    private void writeState(BufferedWriter out, Farm targetFarm) throws IOException {
+        out.write(GSON.toJson(formatMsg(targetFarm)));
         out.write("\n");
         out.flush();
     }
-    private Map<String,Object> formatMsg(String msg, Farm farm){
+    private Map<String,Object> formatMsg(Farm farm){
         Map<String,Object> rsp = new HashMap<>();
         rsp.put("clientId", playerId);
         rsp.put("type","state");
         rsp.put("msg", msg);
-        rsp.put("coins", farm.getCoins());
+        rsp.put("coins", this.farm.getCoins());
 
         PlotState[][] b = farm.snapshot();
         String[][] arr = new String[b.length][b[0].length];

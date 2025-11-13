@@ -11,11 +11,12 @@ public class Farm {
     private static final int COLS = 4;
     private static final int PLANT_COST = 5;
     private static final int HARVEST_REWARD = 12;
-    private static final int STEAL_REWARD = 4;
+    private static final int STEAL_REWARD = 3; // 25%
     private static final long GROW_MS = 10_000;
 
     private final PlotState[][] board = new PlotState[ROWS][COLS];
     private final long[][] plantedAt = new long[ROWS][COLS];
+    private final int[][] plotYield = new int[ROWS][COLS];
     private final Random random = new Random();
     private final String id;
     private int coins = 40;
@@ -24,11 +25,15 @@ public class Farm {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLS; j++) {
                 board[i][j] = PlotState.EMPTY;
+                plotYield[i][j] = 0;
             }
         }
     }
     public synchronized int getCoins() {
         return coins;
+    }
+    public synchronized void addCoins(int amount) {
+        this.coins += amount;
     }
     public synchronized PlotState getState(int row, int col) {
         return board[row][col];
@@ -46,6 +51,7 @@ public class Farm {
         coins -= PLANT_COST;
         plantedAt[row][col] = System.currentTimeMillis();
         board[row][col] = PlotState.GROWING;
+        plotYield[row][col] = HARVEST_REWARD;
     }
 
     public synchronized void harvest(int row, int col) {
@@ -56,12 +62,19 @@ public class Farm {
             throw new IllegalStateException("Crop not ripe");
         }
         board[row][col] = PlotState.EMPTY;
-        coins += HARVEST_REWARD;
+        int yield = plotYield[row][col];
+        plotYield[row][col] = 0;
+        
+        coins += yield;
     }
 
-    public synchronized void steal(int row, int col) {
-        // Simple simulation of being stolen by another player
+    public synchronized int steal(int row, int col) {
         // TODO: replace this demo logic with server-driven stealing requests from other clients.
+        int currentYield = plotYield[row][col];
+        int amount = Math.min(currentYield, STEAL_REWARD);
+
+        plotYield[row][col] -= amount;
+        return amount;
     }
 
     public synchronized boolean tickGrow() {
