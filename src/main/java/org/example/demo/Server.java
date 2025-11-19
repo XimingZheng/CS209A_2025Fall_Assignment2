@@ -78,11 +78,15 @@ public class Server {
     public record LoginResult(String id, Farm farm) {}
 
     public void broadcastPlayerListUpdate() {
-        Map<String, String> playerList = farms.keySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        s -> s,
-                        s -> clients.get(s).getViewingId()));
+        Map<String, String> playerList = new HashMap<>();
+        for (String id : farms.keySet()) {
+            ClientHandler ch = clients.get(id);
+            if (ch != null) {
+                playerList.put(id, ch.getViewingId());
+            } else {
+                playerList.put(id, "OFFLINE");
+            }
+        }
 
         for (ClientHandler client : clients.values()) {
             client.updatePlayerList(playerList);
@@ -90,11 +94,13 @@ public class Server {
     }
     public void removeClient(String clientId) {
         if (clientId == null) return;
-        for (Set<ClientHandler> viewerSet : viewers.values()) {
-            viewerSet.remove(clients.get(clientId));
+        ClientHandler client = clients.get(clientId);
+        if (client != null) {
+            for (Set<ClientHandler> viewerSet : viewers.values()) {
+                viewerSet.remove(client);
+            }
         }
-        // Do NOT remove farm to allow reconnection
-        // farms.remove(clientId);
+    
         clients.remove(clientId);
         viewers.remove(clientId);
         System.out.println(clientId + " disconnected.");
