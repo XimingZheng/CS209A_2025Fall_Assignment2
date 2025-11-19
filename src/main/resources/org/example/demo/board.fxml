@@ -27,7 +27,7 @@
           <Button fx:id="connectButton"
                   text="Connect"
                   styleClass="button action-plant"
-                  onAction="#handleSteal">
+                  onAction="#handleConnect">
             <HBox.margin>
               <Insets right="5"/>
             </HBox.margin>

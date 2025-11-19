@@ -34,28 +34,49 @@ public class Server {
         try (ServerSocket ss = new ServerSocket(PORT)) {
             while (true) {
                 Socket s = ss.accept();
-                System.out.println("[Server] new client: " + s.getRemoteSocketAddress());
+                System.out.println("[Server] new connection: " + s.getRemoteSocketAddress());
 
-                ClientHandler ch = createClient(s);
+                ClientHandler ch = new ClientHandler(this, s);
                 new Thread(ch, "client-" + s.getPort()).start();
-                System.out.println(ch.getPlayerId() + " connected.");
-                broadcastPlayerListUpdate();
             }
         }
     }
-    private ClientHandler createClient(Socket s) {
-        String playerID = String.valueOf(nextId++);
 
-        Farm farm = new Farm(playerID);
-        farms.put(playerID, farm);
-
-        ClientHandler ch = new ClientHandler(this, s, farm, playerID);
-        clients.put(playerID, ch);
-
-        ch.setViewingId(playerID);
-        viewers.computeIfAbsent(playerID, k -> ConcurrentHashMap.newKeySet()).add(ch);
-        return ch;
+    public synchronized LoginResult login(String requestedId, ClientHandler ch) {
+        String id;
+        Farm farm;
+        
+        if (requestedId != null && farms.containsKey(requestedId)) {
+            // Reconnect
+            id = requestedId;
+            farm = farms.get(id);
+            System.out.println("Player " + id + " reconnected.");
+            
+            // If there was an old connection, remove it
+            if (clients.containsKey(id)) {
+                ClientHandler old = clients.get(id);
+                // potentially close old socket?
+            }
+        } else {
+            // New player
+            id = String.valueOf(nextId++);
+            farm = new Farm(id);
+            farms.put(id, farm);
+            System.out.println("Player " + id + " created.");
+        }
+        
+        clients.put(id, ch);
+        
+        // Default view self
+        ch.setViewingId(id);
+        viewers.computeIfAbsent(id, k -> ConcurrentHashMap.newKeySet()).add(ch);
+        
+        broadcastPlayerListUpdate();
+        return new LoginResult(id, farm);
     }
+    
+    public record LoginResult(String id, Farm farm) {}
+
     public void broadcastPlayerListUpdate() {
         Map<String, String> playerList = farms.keySet()
                 .stream()
@@ -68,10 +89,12 @@ public class Server {
         }
     }
     public void removeClient(String clientId) {
+        if (clientId == null) return;
         for (Set<ClientHandler> viewerSet : viewers.values()) {
             viewerSet.remove(clients.get(clientId));
         }
-        farms.remove(clientId);
+        // Do NOT remove farm to allow reconnection
+        // farms.remove(clientId);
         clients.remove(clientId);
         viewers.remove(clientId);
         System.out.println(clientId + " disconnected.");

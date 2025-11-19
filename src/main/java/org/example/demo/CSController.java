@@ -39,6 +39,8 @@ public class CSController {
 
     @FXML private Circle onlineCircle;
 
+    @FXML private Button connectButton;
+
     private GameClient client;
     private int rows = 4, cols = 4;
     private ToggleButton[][] cells;
@@ -57,25 +59,50 @@ public class CSController {
 
     public void init(String host, int port) throws IOException {
         client = new GameClient(host, port, this);
-        connected = client.connect();
+        handleConnect();
+    }
 
+    @FXML
+    private void handleConnect() {
         if (connected) {
-            cellState = new PlotState[rows][cols];
-            createBoard();
-            refreshBoard();
-            onlineCircle.setFill(Color.LIGHTGREEN);
-            startRefreshTicker();
-        } else  {
+            // Disconnect
+            shutdown();
             connected = false;
-            statusMsg = "Failed to connect to server.";
-            cellState = new PlotState[rows][cols];
-            createBoard();
-            disableAllActions();
-            refreshBoard();
+            connectButton.setText("Connect");
             onlineCircle.setFill(Color.GRAY);
-            System.err.println("[CSController] Connection failed.");
+            statusMsg = "Disconnected from server.";
+            disableAllActions();
+            renderStatus();
+        } else {
+            // Connect
+            try {
+                connected = client.connect(myClientId);
+                if (connected) {
+                    cellState = new PlotState[rows][cols];
+                    createBoard();
+                    refreshBoard();
+                    onlineCircle.setFill(Color.LIGHTGREEN);
+                    connectButton.setText("Disconnect");
+                    startRefreshTicker();
+                } else {
+                    handleConnectionFailure("Failed to connect to server.");
+                }
+            } catch (IOException e) {
+                handleConnectionFailure(e.getMessage());
+            }
         }
+    }
 
+    private void handleConnectionFailure(String message) {
+        connected = false;
+        statusMsg = message;
+        cellState = new PlotState[rows][cols];
+        createBoard();
+        disableAllActions();
+        refreshBoard();
+        onlineCircle.setFill(Color.GRAY);
+        connectButton.setText("Connect");
+        System.err.println("[CSController] " + message);
     }
 
     private void createBoard() {
@@ -140,7 +167,7 @@ public class CSController {
         if (refreshTimeline != null) {
             refreshTimeline.stop();
         }
-        if (client != null && connected) {
+        if (client != null) {
             try {
                 client.quit();
                 client.close();

@@ -25,12 +25,15 @@ public class GameClient implements Closeable {
         this.controller = controller;
     }
 
-    public boolean connect() throws IOException {
+    public boolean connect(String existingId) throws IOException {
         try {
             sock = new Socket(host, port);
             in  = new BufferedReader(new InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8));
             out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), StandardCharsets.UTF_8), true);
             running = true;
+            
+            // Send handshake
+            send(Map.of("op", "login", "id", existingId == null ? "" : existingId));
 
             reader = new Thread(() -> {
                 try {

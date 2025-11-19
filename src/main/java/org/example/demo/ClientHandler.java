@@ -14,7 +14,7 @@ public class ClientHandler implements Runnable {
     private static String msg;
     private final Server server;
     private final Socket socket;
-    private final Farm farm;
+    private Farm farm;
     private Map<String, String> playerList; //玩家列表
     private volatile String playerId;
     private volatile String viewingId;
@@ -23,20 +23,35 @@ public class ClientHandler implements Runnable {
     private final AtomicBoolean dirty = new AtomicBoolean(true);
 
 
-    public ClientHandler(Server server, Socket socket, Farm farm, String id) {
+    public ClientHandler(Server server, Socket socket) {
         this.server = server;
         this.socket = socket;
-        this.farm = farm;
-        this.playerId = id;
         msg = "";
     }
 
     public void markDirty() { dirty.set(true); }
 
     @Override public void run() {
-        System.out.println(STR."[Client] connected: \{socket}");
+        System.out.println(STR."[ClientHandler] connected: \{socket}");
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
+            
+            // Handshake
+            String handshake = in.readLine();
+            if (handshake == null) return;
+            
+            Map<?,?> loginReq = GSON.fromJson(handshake, Map.class);
+            if ("login".equals(loginReq.get("op"))) {
+                String reqId = (String) loginReq.get("id");
+                Server.LoginResult result = server.login(reqId, this);
+                this.playerId = result.id();
+                this.farm = result.farm();
+                this.viewingId = this.playerId;
+            } else {
+                System.err.println("Invalid handshake");
+                return;
+            }
+
             msg = "welcome";
             writeState(out, farm);
 
