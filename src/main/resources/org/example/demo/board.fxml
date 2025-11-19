@@ -6,12 +6,38 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
+<?import javafx.geometry.Insets?>
 <VBox spacing="10" styleClass="farm-root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.demo.CSController">
   <stylesheets>
     <URL value="@styles.css" />
   </stylesheets>
-   <Label fx:id="clientID" styleClass="clientID-label" text="ID" />
+  <HBox spacing="0" alignment="CENTER_LEFT">
+    <children>
+      <Label fx:id="clientID" styleClass="clientID-label" text="ID">
+        <HBox.margin>
+          <Insets left="5"/>
+        </HBox.margin>
+      </Label>
+
+      <HBox spacing="5" alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
+        <children>
+          <Circle fx:id="onlineCircle" fill="#c7ccd0" radius="6" stroke="BLACK" strokeType="INSIDE"/>
+          <Button fx:id="connectButton"
+                  text="Connect"
+                  styleClass="button action-plant"
+                  onAction="#handleSteal">
+            <HBox.margin>
+              <Insets right="5"/>
+            </HBox.margin>
+          </Button>
+        </children>
+      </HBox>
+
+    </children>
+  </HBox>
+
   <!-- Top status bar: coins + status message -->
   <HBox alignment="CENTER_LEFT" spacing="10">
     <Label fx:id="coinsLabel" styleClass="coins-label" text="Coins: 0 | Ready." />
@@ -28,6 +54,6 @@
   </HBox>
   <!-- players connected to the server-->
   <HBox fx:id="playersBox" alignment="CENTER" spacing="5">
-    <Label text="Players:" styleClass="clientID-label" />
+    <Label styleClass="clientID-label" text="Players:" />
   </HBox>
 </VBox>

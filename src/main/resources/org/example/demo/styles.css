@@ -14,6 +14,7 @@
   -fx-font-size: 14px;
   -fx-font-weight: bold;
   -fx-text-fill: #a87136;
+  -fx-start-margin: 0;
 }
 
 /* Game board container */
@@ -90,7 +91,7 @@
 .action-steal:hover { -fx-background-color: linear-gradient(#74bdf9, #52adf8); }
 
 .player-online-button {
-  -fx-background-color: #ffe;
+  -fx-background-color: linear-gradient(rgba(224, 224, 224, 0.67), rgba(189, 189, 189, 0.64));
   -fx-text-fill: #51c506;
   -fx-font-size: 12px;
   -fx-font-weight: bold;
@@ -104,7 +105,7 @@
   background-color: #eee;
 }
 .player-offline-button {
-  -fx-background-color: linear-gradient(#e0e0e0, #bdbdbd);
+  -fx-background-color: linear-gradient(rgba(224, 224, 224, 0.67), rgba(189, 189, 189, 0.64));
   -fx-text-fill: #930303;
   -fx-font-size: 12px;
   -fx-font-weight: bold;

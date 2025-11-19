@@ -9,6 +9,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 import org.example.demo.GameClient;
 
@@ -34,6 +37,8 @@ public class CSController {
 
     @FXML private HBox playersBox;
 
+    @FXML private Circle onlineCircle;
+
     private GameClient client;
     private int rows = 4, cols = 4;
     private ToggleButton[][] cells;
@@ -46,16 +51,31 @@ public class CSController {
     private String myClientId;
     private String currentViewingId;
     private Map<String, String> players = new HashMap<String, String>();   // [player][viewing]
+    private boolean connected = false;
 
     private int coins = 0;
 
     public void init(String host, int port) throws IOException {
         client = new GameClient(host, port, this);
-        client.connect();
-        cellState = new PlotState[rows][cols];
-        createBoard();
-        refreshBoard();
-        startRefreshTicker();
+        connected = client.connect();
+
+        if (connected) {
+            cellState = new PlotState[rows][cols];
+            createBoard();
+            refreshBoard();
+            onlineCircle.setFill(Color.LIGHTGREEN);
+            startRefreshTicker();
+        } else  {
+            connected = false;
+            statusMsg = "Failed to connect to server.";
+            cellState = new PlotState[rows][cols];
+            createBoard();
+            disableAllActions();
+            refreshBoard();
+            onlineCircle.setFill(Color.GRAY);
+            System.err.println("[CSController] Connection failed.");
+        }
+
     }
 
     private void createBoard() {
@@ -117,12 +137,17 @@ public class CSController {
     }
 
     public void shutdown() {
-        try {
-            if (client != null) {
+        if (refreshTimeline != null) {
+            refreshTimeline.stop();
+        }
+        if (client != null && connected) {
+            try {
                 client.quit();
                 client.close();
+            } catch (Exception e) {
+                System.err.println("[CSController] Error during shutdown: " + e.getMessage());
             }
-        } catch (IOException ignore) {}
+        }
     }
 
     public void handleUpdate(Map<String,Object> state) {
@@ -200,6 +225,9 @@ public class CSController {
         }
     }
     private void updateActionButtons () {
+        if (currentViewingId == null || myClientId == null) {
+            return;
+        }
         if (currentViewingId.equals(myClientId)){
             // me viewing myself
             harvestButton.setDisable(false);
@@ -210,6 +238,11 @@ public class CSController {
             plantButton.setDisable(true);
             stealButton.setDisable(false);
         }
+    }
+    private void disableAllActions() {
+        if (plantButton != null) plantButton.setDisable(true);
+        if (harvestButton != null) harvestButton.setDisable(true);
+        if (stealButton != null) stealButton.setDisable(true);
     }
     @FXML private void handlePlant() {
         if (!ensureSelection()) { statusMsg = "Select a plot first."; renderStatus(); return; }

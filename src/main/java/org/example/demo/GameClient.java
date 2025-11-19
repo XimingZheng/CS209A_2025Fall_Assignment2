@@ -25,36 +25,47 @@ public class GameClient implements Closeable {
         this.controller = controller;
     }
 
-    public void connect() throws IOException {
-        sock = new Socket(host, port);
-        in  = new BufferedReader(new InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8));
-        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), StandardCharsets.UTF_8), true);
-        running = true;
+    public boolean connect() throws IOException {
+        try {
+            sock = new Socket(host, port);
+            in  = new BufferedReader(new InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8));
+            out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), StandardCharsets.UTF_8), true);
+            running = true;
 
-        reader = new Thread(() -> {
-            try {
-                String line;
-                while (running && (line = in.readLine()) != null) {
-                    Map<?, ?> message = GSON.fromJson(line, Map.class);
-                    Object type = message.get("type");
-                    if ("state".equals(type)) {
-                        Platform.runLater(() -> controller.handleUpdate((Map<String, Object>) message));
-                    } else if ("error".equals(type)) {
-                        Platform.runLater(() -> controller.handleError(String.valueOf(message.get("msg"))));
-                    } else {
-                        String finalLine = line;
-                        Platform.runLater(() ->  controller.handleError("Unknown: " + finalLine));
+            reader = new Thread(() -> {
+                try {
+                    String line;
+                    while (running && (line = in.readLine()) != null) {
+                        Map<?, ?> message = GSON.fromJson(line, Map.class);
+                        Object type = message.get("type");
+                        if ("state".equals(type)) {
+                            Platform.runLater(() -> controller.handleUpdate((Map<String, Object>) message));
+                        } else if ("error".equals(type)) {
+                            Platform.runLater(() -> controller.handleError(String.valueOf(message.get("msg"))));
+                        } else {
+                            String finalLine = line;
+                            Platform.runLater(() ->  controller.handleError("Unknown: " + finalLine));
+                        }
                     }
+                } catch (IOException e) {
+                    if (running) Platform.runLater(() ->  controller.handleError("Disconnected"));
                 }
-            } catch (IOException e) {
-                if (running) Platform.runLater(() ->  controller.handleError("Disconnected"));
-            }
-        }, "net-reader");
-        reader.setDaemon(true);
-        reader.start();
+            }, "net-reader");
+            reader.setDaemon(true);
+            reader.start();
+            return true;
+        } catch (Exception e) {
+            if (running) Platform.runLater(() ->  controller.handleError("Disconnected to server"));
+            return false;
+        }
     }
 
     private synchronized void send(Map<String,Object> obj) {
+        if (out == null) {
+            System.err.println("[GameClient] Cannot send - not connected to server");
+            Platform.runLater(() -> controller.handleError("disconnect from server"));
+            return;
+        }
         out.println(GSON.toJson(obj));
         out.flush();
     }
@@ -66,6 +77,19 @@ public class GameClient implements Closeable {
     public void quit() { send(Map.of("op","quit")); }
     @Override public void close() throws IOException {
         running = false;
-        if (sock != null) sock.close();
+        closeResources();
+    }
+    private void closeResources() {
+        try {
+            if (in != null) in.close();
+        } catch (IOException ignore) {}
+
+        try {
+            if (out != null) out.close();
+        } catch (Exception ignore) {}
+
+        try {
+            if (sock != null && !sock.isClosed()) sock.close();
+        } catch (IOException ignore) {}
     }
 }
