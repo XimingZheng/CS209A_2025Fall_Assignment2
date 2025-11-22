@@ -158,13 +158,22 @@ public class Server {
         ClientHandler victim = clients.get(victimId);
         ClientHandler thief = clients.get(thiefId);
 
-        if (victimId.equals(victim.getViewingId())) {
+        // If victim is online and viewing their own farm, prevent stealing
+        if (victim != null && victimId.equals(victim.getViewingId())) {
             return "Owner is at home, cannot steal";
         }
 
         Farm victimFarm = farms.get(victimId);
         Farm thiefFarm = farms.get(thiefId);
         int amount = victimFarm.steal(row, col);
+
+        if (amount < 0) {
+            return switch (amount) {
+                case -2 -> "Crop not ripe";
+                case -3 -> "Not enough yield to steal";
+                default -> "Cannot steal";
+            };
+        }
 
         thiefFarm.addCoins(amount);
 

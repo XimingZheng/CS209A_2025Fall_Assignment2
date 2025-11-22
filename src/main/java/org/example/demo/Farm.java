@@ -69,10 +69,26 @@ public class Farm {
     }
 
     public synchronized int steal(int row, int col) {
-        // TODO: replace this demo logic with server-driven stealing requests from other clients.
-        int currentYield = plotYield[row][col];
-        int amount = Math.min(currentYield, STEAL_REWARD);
+        if (!checkInBounds(row,col)) return -1;
+        
+        // Must be RIPE
+        if (board[row][col] != PlotState.RIPE) {
+            return -2; 
+        }
 
+        int currentYield = plotYield[row][col];
+        // Stealable period is yield in 20% to 100%
+        double minYield = HARVEST_REWARD * 0.20;
+        
+        if (currentYield < minYield) {
+            return -3;
+        }
+
+        // Steal 0% to 25% of current yield
+        int maxAmount = (int) (currentYield * 0.25);
+
+        int amount = random.nextInt(maxAmount + 1);
+        
         plotYield[row][col] -= amount;
         return amount;
     }

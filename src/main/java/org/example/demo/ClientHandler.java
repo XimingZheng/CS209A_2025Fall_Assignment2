@@ -107,6 +107,10 @@ public class ClientHandler implements Runnable {
             }
         } catch (Exception e) {
             System.out.println(STR."[Client] closed: \{e.getMessage()}");
+        } finally {
+            if (playerId != null) {
+                server.removeClient(playerId);
+            }
         }
     }
 

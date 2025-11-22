@@ -71,6 +71,10 @@ public class GameClient implements Closeable {
         }
         out.println(GSON.toJson(obj));
         out.flush();
+        if (out.checkError()) {
+            System.err.println("[GameClient] Send failed");
+            Platform.runLater(() -> controller.handleError("Disconnected (Send failed)"));
+        }
     }
 
     public void plant(int r, int c) { send(Map.of("op","plant","row",r,"col",c)); }

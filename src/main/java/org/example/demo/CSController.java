@@ -212,7 +212,11 @@ public class CSController {
     }
 
     public void handleError(String err) {
-        onError(err);
+        if (err != null && err.toLowerCase().contains("disconnect")) {
+            handleConnectionFailure(err);
+        } else {
+            onError(err);
+        }
     }
 
     private void onError(String err) {
