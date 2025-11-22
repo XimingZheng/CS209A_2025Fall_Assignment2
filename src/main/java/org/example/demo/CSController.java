@@ -7,6 +7,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class CSController {
 
@@ -75,8 +77,16 @@ public class CSController {
             renderStatus();
         } else {
             // Connect
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Login");
+            dialog.setHeaderText("Enter Player ID to reconnect");
+            dialog.setContentText("Player ID (leave empty for new game):");
+
+            Optional<String> result = dialog.showAndWait();
+            if (result.isEmpty()) return;
+
             try {
-                connected = client.connect(myClientId);
+                connected = client.connect(result.get());
                 if (connected) {
                     cellState = new PlotState[rows][cols];
                     createBoard();
