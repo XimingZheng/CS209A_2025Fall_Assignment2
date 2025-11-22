@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientHandler implements Runnable {
     private static final Gson GSON = new Gson();
-    private static String msg;
+    private String msg;
     private final Server server;
     private final Socket socket;
     private Farm farm;

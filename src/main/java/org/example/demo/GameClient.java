@@ -7,6 +7,8 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class GameClient implements Closeable {
     private static final Gson GSON = new Gson();
@@ -18,6 +20,9 @@ public class GameClient implements Closeable {
     private PrintWriter out;
     private Thread reader;
     private volatile boolean running = false;
+    
+    // Single thread executor to ensure order but run off UI thread
+    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Client-Sender"));
 
     public GameClient(String host, int port, CSController controller) {
         this.host = host;
@@ -63,18 +68,23 @@ public class GameClient implements Closeable {
         }
     }
 
-    private synchronized void send(Map<String,Object> obj) {
-        if (out == null) {
-            System.err.println("[GameClient] Cannot send - not connected to server");
-            Platform.runLater(() -> controller.handleError("disconnect from server"));
-            return;
-        }
-        out.println(GSON.toJson(obj));
-        out.flush();
-        if (out.checkError()) {
-            System.err.println("[GameClient] Send failed");
-            Platform.runLater(() -> controller.handleError("Disconnected (Send failed)"));
-        }
+    private void send(Map<String,Object> obj) {
+        sendExecutor.submit(() -> {
+            synchronized (this) {
+                if (out == null) {
+                    System.err.println("[GameClient] Cannot send - not connected to server");
+                    Platform.runLater(() -> controller.handleError("disconnect from server"));
+                    return;
+                }
+                System.out.println("[Client] Sending request on " + Thread.currentThread().getName());
+                out.println(GSON.toJson(obj));
+                out.flush();
+                if (out.checkError()) {
+                    System.err.println("[GameClient] Send failed");
+                    Platform.runLater(() -> controller.handleError("Disconnected (Send failed)"));
+                }
+            }
+        });
     }
 
     public void plant(int r, int c) { send(Map.of("op","plant","row",r,"col",c)); }
@@ -84,6 +94,7 @@ public class GameClient implements Closeable {
     public void quit() { send(Map.of("op","quit")); }
     @Override public void close() throws IOException {
         running = false;
+        sendExecutor.shutdownNow();
         closeResources();
     }
     private void closeResources() {

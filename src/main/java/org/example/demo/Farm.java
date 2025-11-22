@@ -69,10 +69,12 @@ public class Farm {
     }
 
     public synchronized int steal(int row, int col) {
+        System.out.println(Thread.currentThread().getName() + " [Server-Lock] Start processing steal request at (" + row + "," + col + ")");
         if (!checkInBounds(row,col)) return -1;
         
         // Must be RIPE
         if (board[row][col] != PlotState.RIPE) {
+            System.out.println(Thread.currentThread().getName() + " [Server-Lock] Failed: Crop not ripe");
             return -2; 
         }
 
@@ -81,6 +83,7 @@ public class Farm {
         double minYield = HARVEST_REWARD * 0.20;
         
         if (currentYield < minYield) {
+            System.out.println(Thread.currentThread().getName() + " [Server-Lock] Failed: Yield too low (" + currentYield + " < " + minYield + ")");
             return -3;
         }
 
@@ -90,6 +93,7 @@ public class Farm {
         int amount = random.nextInt(maxAmount + 1);
         
         plotYield[row][col] -= amount;
+        System.out.println(Thread.currentThread().getName() + " [Server-Lock] Success: Stole " + amount + ". Yield reduced from " + currentYield + " to " + plotYield[row][col]);
         return amount;
     }
 
