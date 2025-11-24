@@ -11,10 +11,8 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.util.Duration;
-import org.example.demo.GameClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,9 +56,12 @@ public class CSController {
     private boolean connected = false;
 
     private int coins = 0;
+    private String serverHost;
+    private int serverPort;
 
     public void init(String host, int port) throws IOException {
-        client = new GameClient(host, port, this);
+        this.serverHost = host;
+        this.serverPort = port;
         handleConnect();
     }
 
@@ -86,6 +87,10 @@ public class CSController {
             if (result.isEmpty()) return;
 
             try {
+                if (client != null) {
+                    try { client.close(); } catch (Exception ignore) {}
+                }
+                client = new GameClient(serverHost, serverPort, this);
                 connected = client.connect(result.get());
                 if (connected) {
                     cellState = new PlotState[rows][cols];
